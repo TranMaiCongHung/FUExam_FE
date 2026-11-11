@@ -1,0 +1,16 @@
+/* FUExam — Minimalist Design Tokens */
+:root {
+    --color-bg: #FFFFFF;
+    --color-surface: #F8FAFC;
+    --color-border: #E2E8F0;
+    --color-primary: #F97316;
+    --color-text-head: #0F172A;
+    --color-text-body: #1E293B;
+    --color-text-muted: #64748B;
+    --color-active-bg: rgba(249, 115, 22, 0.1);
+    --color-hover-bg: rgba(241, 245, 249, 0.8);
+
+    --radius-card: 10px;
+    --radius-input: 8px;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
