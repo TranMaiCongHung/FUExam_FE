@@ -2,6 +2,7 @@ import { Search, UserPlus, Eye, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { userService } from "@/services/userService";
 import MessageToast from "@/shared/components/MessageToast";
+import RecentActiveUsers from "./components/RecentActiveUsers";
 
 export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,6 +149,13 @@ export default function UserManagementPage() {
         </button>
       </div>
 
+      {/* Thẻ theo dõi người dùng mới & hoạt động gần đây */}
+      <RecentActiveUsers
+        users={users}
+        loading={loading}
+        onSelectUser={openEditModal}
+      />
+
       {/* Table Container */}
       <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-2xs">
         {/* Toolbar */}
@@ -230,7 +238,7 @@ export default function UserManagementPage() {
                       <td className="px-6 py-3.5 text-right">
                         <button 
                           onClick={() => openEditModal(user)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-md text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs font-semibold transition-all cursor-pointer shadow-xs"
                         >
                           <Eye size={13} />
                           <span>Chi tiết</span>

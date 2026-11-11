@@ -19,5 +19,11 @@ export const examService = {
 
     deleteExam(examId) {
         return api.delete(`/api/admin/exams/${examId}`);
+    },
+
+    // 4.1 Bật/tắt ẩn hiện đề thi
+    toggleVisibility(examId, visible) {
+        const query = typeof visible === "boolean" ? `?visible=${visible}` : "";
+        return api.patch(`/api/admin/exams/${examId}/visibility${query}`, {});
     }
 };

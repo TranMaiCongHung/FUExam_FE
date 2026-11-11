@@ -67,7 +67,7 @@ export default function Sidebar({ open, onClose }) {
                 flex items-center gap-3 px-3.5 py-2.5 rounded-lg
                 text-xs sm:text-sm font-medium transition-all duration-150 cursor-pointer
                 ${isActive
-                  ? "bg-neutral-900 text-white font-semibold shadow-2xs"
+                  ? "bg-orange-500 text-white font-semibold shadow-xs hover:bg-orange-600"
                   : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                 }
               `}

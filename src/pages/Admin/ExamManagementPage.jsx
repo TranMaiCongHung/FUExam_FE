@@ -1,4 +1,4 @@
-import { Search, Plus, BookOpen, Calendar, ChevronRight, Eye, Trash2, X, AlertCircle } from "lucide-react";
+import { Search, Plus, BookOpen, Calendar, ChevronRight, Eye, EyeOff, Trash2, X, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { examService } from "@/services/examService";
@@ -166,6 +166,45 @@ export default function ExamManagementPage() {
         }
       }
     });
+  };
+
+  const [togglingExamId, setTogglingExamId] = useState(null);
+
+  const handleToggleVisibility = async (examId, currentStatus) => {
+    if (!examId) return;
+    try {
+      setTogglingExamId(examId);
+      const isCurrentlyHidden = currentStatus === "HIDDEN";
+      const newVisible = isCurrentlyHidden ? true : false;
+      const res = await examService.toggleVisibility(examId, newVisible);
+      const updatedExam = res?.data || res;
+      const nextStatus = updatedExam?.status || (newVisible ? "PUBLISHED" : "HIDDEN");
+
+      setExams(prev => prev.map(ex => {
+        const id = ex.id ?? ex.examId;
+        if (id === examId) {
+          const updated = { ...ex, status: nextStatus };
+          try {
+            localStorage.setItem(`EXAM_${examId}_INFO`, JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        }
+        return ex;
+      }));
+
+      setToast({
+        type: "success",
+        message: nextStatus === "HIDDEN" ? "Đã ẩn đề thi khỏi sinh viên!" : "Đã bật hiển thị đề thi cho sinh viên!"
+      });
+    } catch (err) {
+      console.error("Failed to toggle visibility:", err);
+      setToast({
+        type: "error",
+        message: err.response?.data?.message || err.message || "Không thể thay đổi trạng thái đề thi."
+      });
+    } finally {
+      setTogglingExamId(null);
+    }
   };
 
   // Open Create Exam Modal
@@ -427,7 +466,7 @@ export default function ExamManagementPage() {
                   }}
                   className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     isActive 
-                      ? "bg-neutral-900 text-white font-semibold shadow-2xs" 
+                      ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-xs" 
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                   }`}
                 >
@@ -501,8 +540,8 @@ export default function ExamManagementPage() {
                 onClick={() => setExamTypeFilter(type.value)}
                 className={`px-3 py-1.5 rounded-md font-medium transition-all cursor-pointer ${
                   examTypeFilter === type.value 
-                    ? "bg-white text-neutral-900 font-semibold shadow-xs" 
-                    : "text-neutral-500 hover:text-neutral-900"
+                    ? "bg-orange-500 text-white font-semibold shadow-xs" 
+                    : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
                 {type.label}
@@ -519,6 +558,7 @@ export default function ExamManagementPage() {
                 <tr>
                   <th className="px-6 py-3.5">KỲ THI / LOẠI</th>
                   <th className="px-6 py-3.5">TIÊU ĐỀ ĐỀ THI</th>
+                  <th className="px-6 py-3.5">TRẠNG THÁI</th>
                   <th className="px-6 py-3.5">NGÀY TẠO</th>
                   <th className="px-6 py-3.5 text-right">THAO TÁC</th>
                 </tr>
@@ -526,25 +566,26 @@ export default function ExamManagementPage() {
               <tbody className="divide-y divide-neutral-100 text-neutral-900">
                 {loadingExams ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-xs text-neutral-400">
+                    <td colSpan={5} className="px-6 py-10 text-center text-xs text-neutral-400">
                       <div className="inline-block w-5 h-5 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin mb-2"></div>
                       <p>Đang tải danh sách đề thi...</p>
                     </td>
                   </tr>
                 ) : !selectedSubject ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-xs text-neutral-400">
+                    <td colSpan={5} className="px-6 py-10 text-center text-xs text-neutral-400">
                       Chưa chọn môn học hoặc học kỳ này chưa có môn học. Vui lòng chọn môn học ở trên.
                     </td>
                   </tr>
                 ) : filteredExams.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-xs text-neutral-400">
+                    <td colSpan={5} className="px-6 py-10 text-center text-xs text-neutral-400">
                       Chưa có đề thi nào cho môn học này. Hãy nhấn &quot;Tạo đề thi mới&quot; để tạo đề thi!
                     </td>
                   </tr>
                 ) : filteredExams.map(exam => {
                   const examId = exam.id || exam.examId || exam._id || exam.exam_id;
+                  const isHidden = exam.status === "HIDDEN";
                   return (
                     <tr key={examId || Math.random()} className="hover:bg-neutral-50/70 transition-colors">
                       <td className="px-6 py-3.5 font-medium">
@@ -566,6 +607,19 @@ export default function ExamManagementPage() {
                         <div className="text-xs text-neutral-400 mt-0.5 max-w-md truncate">{exam.description || "Không có mô tả"}</div>
                       </td>
                       <td className="px-6 py-3.5">
+                        {isHidden ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
+                            <EyeOff size={12} className="text-neutral-500" />
+                            <span>Đang ẩn</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Eye size={12} className="text-emerald-600" />
+                            <span>Hiển thị</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5">
                         <div className="flex items-center gap-1.5 text-xs text-neutral-500">
                           <Calendar size={13} className="text-neutral-400" />
                           {(exam.createdAt || exam.uploadDate) ? new Date(exam.createdAt || exam.uploadDate).toLocaleDateString() : "N/A"}
@@ -573,6 +627,32 @@ export default function ExamManagementPage() {
                       </td>
                       <td className="px-6 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Nút Bật / Tắt Ẩn Hiện */}
+                          <button
+                            onClick={() => handleToggleVisibility(examId, exam.status)}
+                            disabled={togglingExamId === examId}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer border shadow-2xs disabled:opacity-50 ${
+                              isHidden
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50 hover:text-amber-700"
+                            }`}
+                            title={isHidden ? "Hiển thị đề thi cho sinh viên" : "Ẩn đề thi khỏi sinh viên"}
+                          >
+                            {togglingExamId === examId ? (
+                              <div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-neutral-800 rounded-full animate-spin"></div>
+                            ) : isHidden ? (
+                              <>
+                                <Eye size={13} />
+                                <span>Hiện</span>
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff size={13} />
+                                <span>Ẩn</span>
+                              </>
+                            )}
+                          </button>
+
                           <button 
                             onClick={() => {
                               if (!examId) {
@@ -584,7 +664,7 @@ export default function ExamManagementPage() {
                               } catch (_) {}
                               navigate(`/admin/exams/${examId}`, { state: { exam } });
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-md text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs font-semibold transition-all cursor-pointer shadow-xs"
                           >
                             <Eye size={13} />
                             <span>Chi tiết</span>
