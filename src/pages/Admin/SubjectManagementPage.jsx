@@ -211,7 +211,7 @@ export default function SubjectManagementPage() {
                   onClick={() => setActiveSemester(sem.value)}
                   className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     isActive 
-                      ? "bg-neutral-900 text-white font-semibold shadow-2xs" 
+                      ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-xs" 
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                   }`}
                 >

@@ -35,8 +35,9 @@ export function useLoginForm() {
      * Chuyển hướng trực tiếp sang Backend để Backend thực hiện luồng OAuth2 với Google
      */
     const handleGoogleLogin = () => {
-        // Chú ý: Đổi cổng 8080 thành cổng thực tế mà Backend Spring Boot đang chạy
-        window.location.href = "http://localhost:8080/oauth2/authorization/google";
+        const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+        const apiUrl = rawApiUrl.replace(/\/+$/, "");
+        window.location.href = `${apiUrl}/oauth2/authorization/google`;
     };
 
     // Trả về các dữ liệu và hàm cần thiết để Component giao diện (UI) sử dụng

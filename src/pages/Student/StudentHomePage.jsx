@@ -202,9 +202,6 @@ export default function StudentHomePage() {
             </div>
             <div>
               <span className="font-extrabold text-xl text-neutral-900 tracking-tight">FUExam</span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-100">
-                Student Portal
-              </span>
             </div>
           </div>
 
@@ -255,251 +252,289 @@ export default function StudentHomePage() {
         </div>
       </header>
 
-      {/* Main Student Hub */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* Curriculum Semester & Subjects Selection */}
-        <div className="border border-neutral-200 rounded-lg p-3.5 sm:p-4 bg-white shadow-2xs space-y-3">
-          {/* Semester Row */}
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-none py-0.5">
-            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider shrink-0 min-w-[76px] whitespace-nowrap">
-              Học kỳ
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {SEMESTERS.map(sem => {
-                const isActive = activeSemester === sem.value;
-                return (
-                  <button
-                    key={sem.value}
-                    onClick={() => {
-                      if (activeSemester !== sem.value) {
-                        setActiveSemester(sem.value);
-                        setSelectedSubjectId(null);
-                        setExams([]);
-                        localStorage.setItem("STUDENT_ACTIVE_SEMESTER", sem.value);
-                        localStorage.removeItem("STUDENT_SELECTED_SUBJECT_ID");
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                      isActive
-                        ? "bg-neutral-900 text-white font-semibold shadow-2xs"
-                        : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
-                    }`}
-                  >
-                    {sem.name}
-                  </button>
-                );
-              })}
+      {/* Main Student Hub: 2 Cột ngang hàng (Left: Học kỳ & Môn học sticky, Right: Toolbar & Đề thi responsive) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8 relative">
+          
+          {/* CỘT TRÁI: Học kỳ & Môn học (Lơ lửng sticky chạy dọc theo nội dung khi cuộn) */}
+          <aside className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-20 z-10 self-start space-y-4">
+            <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 sm:p-5 shadow-xs max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-none">
+              {/* Tiêu đề Cột trái */}
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-neutral-100">
+                <Layers size={18} className="text-orange-500" />
+                <h3 className="font-bold text-sm text-neutral-900 tracking-tight">
+                  Chương trình đào tạo
+                </h3>
+              </div>
+
+              {/* Phần 1: Học kỳ */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                  <span>Học kỳ</span>
+                  <span className="text-[11px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+                    Kỳ {activeSemester}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  {SEMESTERS.map(sem => {
+                    const isActive = activeSemester === sem.value;
+                    return (
+                      <button
+                        key={sem.value}
+                        onClick={() => {
+                          if (activeSemester !== sem.value) {
+                            setActiveSemester(sem.value);
+                            setSelectedSubjectId(null);
+                            setExams([]);
+                            localStorage.setItem("STUDENT_ACTIVE_SEMESTER", sem.value);
+                            localStorage.removeItem("STUDENT_SELECTED_SUBJECT_ID");
+                          }
+                        }}
+                        className={`py-2 px-1 text-center rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-orange-500 text-white shadow-xs"
+                            : "bg-neutral-50 hover:bg-neutral-100 text-neutral-700 hover:text-neutral-900"
+                        }`}
+                      >
+                        {sem.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t border-neutral-100 my-4"></div>
+
+              {/* Phần 2: Môn học (Làm gọn lại dạng thẻ chip) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                  <span>Môn học</span>
+                  {subjects.length > 0 && (
+                    <span className="text-[11px] font-medium text-neutral-400 normal-case">
+                      {subjects.length} môn
+                    </span>
+                  )}
+                </div>
+
+                {loadingSubjects ? (
+                  <div className="py-4 text-center text-xs text-neutral-400">
+                    <div className="inline-block w-4 h-4 border-2 border-neutral-300 border-t-orange-500 rounded-full animate-spin mb-1.5"></div>
+                    <p>Đang tải...</p>
+                  </div>
+                ) : subjects.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-neutral-400 italic bg-neutral-50 rounded-lg">
+                    Chưa có môn học nào trong kỳ này.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {subjects.map(sub => {
+                      const subId = sub.id ?? sub.subjectId ?? sub.subjectCode;
+                      const isSelected = selectedSubjectId === subId;
+                      return (
+                        <button
+                          key={subId}
+                          onClick={() => {
+                            setSelectedSubjectId(subId);
+                            localStorage.setItem("STUDENT_SELECTED_SUBJECT_ID", subId);
+                          }}
+                          title={sub.subjectName || sub.subjectCode}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-orange-500 text-white shadow-xs"
+                              : "bg-neutral-50 hover:bg-neutral-100 text-neutral-700 hover:text-neutral-900 border border-neutral-200/50"
+                          }`}
+                        >
+                          {sub.subjectCode}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </aside>
 
-          <div className="border-t border-neutral-100"></div>
+          {/* CỘT PHẢI: Toàn bộ phần còn lại (Toolbar + Kho đề thi) */}
+          <section className="flex-1 min-w-0 space-y-5">
+            {/* Header Toolbar: Tiêu đề đề thi môn + Tìm kiếm dồn qua phải + Bộ lọc FE/PE */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+              {/* Tiêu đề đề thi môn bên trái */}
+              <div className="flex items-center gap-2.5">
+                <BookMarked size={21} className="text-neutral-700 shrink-0" />
+                <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
+                  {selectedSubject ? (
+                    <span>Đề thi môn <span className="text-orange-600">{selectedSubject.subjectCode}</span></span>
+                  ) : (
+                    <span>Danh sách đề thi</span>
+                  )}
+                  <span className="text-xs font-normal text-neutral-400 ml-1">
+                    ({filteredExams.length} đề thi)
+                  </span>
+                </h2>
+              </div>
 
-          {/* Subjects Row */}
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-none py-0.5">
-            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider shrink-0 min-w-[76px] whitespace-nowrap">
-              Môn học
-            </span>
-            {loadingSubjects ? (
-              <span className="text-xs text-neutral-400 py-1">Đang tải danh sách môn học...</span>
-            ) : subjects.length === 0 ? (
-              <span className="text-xs text-neutral-400 italic py-1">
-                Chưa có môn học nào được cập nhật trong học kỳ này.
-              </span>
-            ) : (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {subjects.map(sub => {
-                  const subId = sub.id ?? sub.subjectId ?? sub.subjectCode;
-                  const isSelected = selectedSubjectId === subId;
-                  return (
+              {/* Cụm Tìm kiếm tối giản & Bộ lọc FE/PE */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* Search Box tối giản với border dưới */}
+                <div className="flex items-center gap-2 w-full sm:w-52 pb-1 border-b border-neutral-300 focus-within:border-orange-500 transition-colors">
+                  <Search size={15} className="text-neutral-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Tìm kiếm đề thi..."
+                    className="w-full bg-transparent text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none"
+                  />
+                  {searchTerm && (
                     <button
-                      key={subId}
-                      onClick={() => {
-                        setSelectedSubjectId(subId);
-                        localStorage.setItem("STUDENT_SELECTED_SUBJECT_ID", subId);
-                      }}
-                      title={sub.subjectName || sub.subjectCode}
-                      className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-orange-500 text-white font-semibold shadow-xs hover:bg-orange-600"
-                          : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                      onClick={() => setSearchTerm("")}
+                      className="text-neutral-400 hover:text-neutral-600 text-xs px-1 cursor-pointer"
+                      title="Xóa tìm kiếm"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Exam Type Filters tối giản: không nền xám bao ngoài */}
+                <div className="flex items-center gap-1 text-xs shrink-0 self-start sm:self-auto">
+                  {[
+                    { label: "Tất cả", value: "ALL" },
+                    { label: "FE", value: "FE" },
+                    { label: "PE", value: "PE" }
+                  ].map(type => (
+                    <button
+                      key={type.value}
+                      onClick={() => setExamTypeFilter(type.value)}
+                      className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                        examTypeFilter === type.value
+                          ? "bg-orange-500 text-white font-semibold shadow-xs"
+                          : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
                       }`}
                     >
-                      {sub.subjectCode}
+                      {type.label}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Search & Exam Type Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm đề thi..."
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50 hover:bg-neutral-100/60 focus:bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 transition-colors shadow-2xs"
-            />
-          </div>
-
-          {/* Exam Type Filters */}
-          <div className="flex items-center gap-1 p-1 rounded-md bg-neutral-100 text-xs shrink-0 self-start sm:self-auto">
-            {[
-              { label: "Tất cả", value: "ALL" },
-              { label: "FE", value: "FE" },
-              { label: "PE", value: "PE" }
-            ].map(type => (
-              <button
-                key={type.value}
-                onClick={() => setExamTypeFilter(type.value)}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all cursor-pointer ${
-                  examTypeFilter === type.value
-                    ? "bg-white text-neutral-900 font-semibold shadow-xs"
-                    : "text-neutral-500 hover:text-neutral-900"
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Exam Cards Grid */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-neutral-900 flex items-center gap-2">
-              <BookMarked size={18} className="text-neutral-700" />
-              {selectedSubject ? (
-                <span>Đề thi môn <span className="font-bold text-neutral-900">{selectedSubject.subjectCode}</span></span>
+            {/* Exam Cards Grid: 3 item 1 hàng, card gọn gàng không bị bè dài */}
+            <div>
+              {loadingExams ? (
+                <div className="py-16 text-center text-neutral-400">
+                  <div className="inline-block w-6 h-6 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin mb-3"></div>
+                  <p className="text-sm text-neutral-500">Đang tải danh sách đề thi...</p>
+                </div>
+              ) : filteredExams.length === 0 ? (
+                <div className="py-16 text-center bg-white border border-neutral-200 rounded-2xl p-8 shadow-2xs">
+                  <GraduationCap size={44} className="mx-auto text-neutral-300 mb-3 stroke-[1.5]" />
+                  <h3 className="text-base font-semibold text-neutral-800">Chưa có đề thi nào phù hợp</h3>
+                  <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+                    {subjects.length === 0 
+                      ? "Học kỳ này hiện chưa có môn học hoặc đề thi nào khả dụng."
+                      : searchTerm 
+                        ? "Không tìm thấy đề thi phù hợp với từ khóa tìm kiếm của bạn." 
+                        : "Môn học này hiện chưa có đề thi được tải lên hệ thống."}
+                  </p>
+                </div>
               ) : (
-                <span>Danh sách đề thi</span>
-              )}
-            </h2>
-            <span className="text-xs text-neutral-400">
-              {filteredExams.length} đề thi
-            </span>
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                  {filteredExams.map((exam) => {
+                    const examId = exam.id ?? exam.examId;
+                    const isFE = exam.examType === "FE";
+                    const attemptCount = practiceService.getAttemptHistory(examId, 3).length;
 
-          {loadingExams ? (
-            <div className="py-16 text-center text-neutral-400">
-              <div className="inline-block w-6 h-6 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin mb-3"></div>
-              <p className="text-sm text-neutral-500">Đang tải danh sách đề thi...</p>
-            </div>
-          ) : filteredExams.length === 0 ? (
-            <div className="py-16 text-center bg-white border border-neutral-200 rounded-lg p-8 shadow-2xs">
-              <GraduationCap size={44} className="mx-auto text-neutral-300 mb-3 stroke-[1.5]" />
-              <h3 className="text-base font-semibold text-neutral-800">Chưa có đề thi nào phù hợp</h3>
-              <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-                {subjects.length === 0 
-                  ? "Học kỳ này hiện chưa có môn học hoặc đề thi nào khả dụng."
-                  : searchTerm 
-                    ? "Không tìm thấy đề thi phù hợp với từ khóa tìm kiếm của bạn." 
-                    : "Môn học này hiện chưa có đề thi được tải lên hệ thống."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredExams.map((exam) => {
-                const examId = exam.id ?? exam.examId;
-                const isFE = exam.examType === "FE";
-                const attemptCount = practiceService.getAttemptHistory(examId, 3).length;
-
-                return (
-                  <div
-                    key={examId}
-                    className="bg-white border border-neutral-200 rounded-lg p-4 sm:p-5 shadow-2xs hover:border-neutral-300 hover:shadow-xs transition-all flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2 mb-2.5">
-                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
-                          isFE 
-                            ? "bg-orange-50 text-orange-600 border-orange-200/60" 
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                        }`}>
-                          {exam.examType || "FE"}
-                        </span>
-
-                        {exam.semesterCode && (
-                          <span className="text-[11px] font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
-                            {exam.semesterCode}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Title & Description */}
-                      <h3 
-                        onClick={() => setSelectedExamModal(exam)}
-                        className="font-semibold text-base text-neutral-900 group-hover:text-orange-600 transition-colors cursor-pointer line-clamp-1 leading-snug"
-                        title={exam.title}
+                    return (
+                      <div
+                        key={examId}
+                        className="bg-white border border-neutral-200/90 rounded-xl p-3 sm:p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-orange-300 transition-all duration-200 flex flex-col justify-between group max-w-[250px] w-full"
                       >
-                        {exam.title || "Đề thi không có tiêu đề"}
-                      </h3>
+                        <div>
+                          {/* Top Badges */}
+                          <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                              isFE 
+                                ? "bg-orange-50 text-orange-600 border-orange-200/60" 
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                            }`}>
+                              {exam.examType || "FE"}
+                            </span>
 
-                      <p className="text-xs text-neutral-500 mt-1.5 line-clamp-2 leading-relaxed">
-                        {exam.description || "Đề thi trắc nghiệm ôn tập kiến thức."}
-                      </p>
-                    </div>
+                            {exam.semesterCode && (
+                              <span className="text-[10px] font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                                {exam.semesterCode}
+                              </span>
+                            )}
+                          </div>
 
-                    {/* Footer Actions */}
-                    <div className="mt-4 pt-3 border-t border-neutral-100 space-y-2.5">
-                      {/* 2 Chế độ làm bài */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleStartPractice(examId, "study")}
-                          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-medium transition-colors cursor-pointer"
-                        >
-                          <BookOpen size={14} className="text-neutral-500" />
-                          <span>Học tập</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleStartPractice(examId, "exam")}
-                          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-                        >
-                          <Play size={13} className="fill-white" />
-                          <span>Thi thử</span>
-                        </button>
-                      </div>
-
-                      {/* Dòng phụ: Ngày tải + Lịch sử + Chi tiết */}
-                      <div className="flex items-center justify-between text-[11px] text-neutral-400 px-0.5">
-                        <span className="flex items-center gap-1">
-                          <Calendar size={12} />
-                          {exam.createdAt || exam.uploadDate ? new Date(exam.createdAt || exam.uploadDate).toLocaleDateString() : "2026"}
-                        </span>
-
-                        <div className="flex items-center gap-3">
-                          {attemptCount > 0 && (
-                            <button
-                              onClick={() => handleOpenHistory(exam)}
-                              className="text-neutral-600 hover:text-neutral-900 flex items-center gap-1 font-medium cursor-pointer transition-colors"
-                              title="Xem lại các lần làm bài gần nhất"
-                            >
-                              <History size={12} className="text-orange-500" />
-                              <span>Lịch sử ({attemptCount})</span>
-                            </button>
-                          )}
-
-                          <button
+                          {/* Title */}
+                          <h3 
                             onClick={() => setSelectedExamModal(exam)}
-                            className="font-medium text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                            className="font-bold text-xs sm:text-sm text-neutral-900 group-hover:text-orange-600 transition-colors cursor-pointer line-clamp-1 leading-snug"
+                            title={exam.title}
                           >
-                            Chi tiết
-                          </button>
+                            {exam.title || "Đề thi không có tiêu đề"}
+                          </h3>
+                        </div>
+
+                        {/* Footer Actions: Học trên, Thi dưới */}
+                        <div className="mt-2.5 pt-2 border-t border-neutral-100 space-y-1.5">
+                          {/* 2 Chế độ làm bài: Học hàng trên, Thi hàng dưới */}
+                          <div className="flex flex-col gap-1.5">
+                            <button
+                              onClick={() => handleStartPractice(examId, "study")}
+                              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              <BookOpen size={12} className="text-neutral-500" />
+                              <span>Học</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleStartPractice(examId, "exam")}
+                              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                            >
+                              <Play size={11} className="fill-white" />
+                              <span>Thi</span>
+                            </button>
+                          </div>
+
+                          {/* Dòng phụ: Ngày tải + Lịch sử + Chi tiết */}
+                          <div className="flex items-center justify-between text-[10px] text-neutral-400 px-0.5 pt-0.5">
+                            <span className="flex items-center gap-1">
+                              <Calendar size={11} />
+                              {exam.createdAt || exam.uploadDate ? new Date(exam.createdAt || exam.uploadDate).toLocaleDateString() : "2026"}
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              {attemptCount > 0 && (
+                                <button
+                                  onClick={() => handleOpenHistory(exam)}
+                                  className="text-neutral-600 hover:text-neutral-900 flex items-center gap-1 font-medium cursor-pointer transition-colors"
+                                  title="Xem lại các lần làm bài gần nhất"
+                                >
+                                  <History size={11} className="text-orange-500" />
+                                  <span>Lịch sử ({attemptCount})</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => setSelectedExamModal(exam)}
+                                className="font-medium text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                              >
+                                Chi tiết
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </section>
         </div>
       </main>
 
@@ -756,11 +791,6 @@ export default function StudentHomePage() {
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <footer className="mt-auto border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-400">
-        FUExam Platform · FPT University Student Learning Hub
-      </footer>
     </div>
   );
 }
