@@ -1,4 +1,4 @@
-import { ArrowLeft, Play, Upload, Image as ImageIcon, Info, Settings2, Save, Sparkles, Trash2, Check, X, AlertCircle, Plus, BookOpen } from "lucide-react";
+import { ArrowLeft, Play, Upload, Image as ImageIcon, Info, Settings2, Save, Sparkles, Trash2, Check, X, AlertCircle, Plus, BookOpen, Eye, EyeOff } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { questionService } from "@/services/questionService";
@@ -47,6 +47,7 @@ export default function ExamDetailsPage() {
     onConfirm: () => {}
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isTogglingViewImage, setIsTogglingViewImage] = useState(false);
   const isSavingRef = useRef(false);
   const fileInputRef = useRef(null);
 
@@ -67,10 +68,7 @@ export default function ExamDetailsPage() {
   const fetchExamInfo = async () => {
     if (!id || id === "undefined" || id === "null") return;
     try {
-      const res = await examService.getExams(0, 100);
-      const data = res?.data || res;
-      const list = data?.content || (Array.isArray(data) ? data : []);
-      const found = list.find(e => String(e.id ?? e.examId) === String(id));
+      const found = await examService.findExamById(id);
       if (found) {
         setExam(found);
         try {
@@ -183,6 +181,32 @@ export default function ExamDetailsPage() {
   };
 
   const draftCount = questions.filter(q => !q.id).length;
+
+  const allowViewImage = exam?.allowViewImage !== false;
+
+  const handleToggleViewImage = async () => {
+    if (!exam || isTogglingViewImage) return;
+    setIsTogglingViewImage(true);
+    try {
+      const current = exam.allowViewImage !== false;
+      const res = await examService.toggleViewImage(id, !current);
+      const updated = res?.data || res;
+      const next = typeof updated?.allowViewImage === "boolean" ? updated.allowViewImage : !current;
+      const merged = { ...exam, ...(updated && typeof updated === "object" ? updated : {}), allowViewImage: next };
+      setExam(prev => ({ ...prev, ...(updated && typeof updated === "object" ? updated : {}), allowViewImage: next }));
+      try {
+        localStorage.setItem(`EXAM_${id}_INFO`, JSON.stringify(merged));
+      } catch (_) {}
+      setToast({
+        type: "success",
+        message: next ? "Đã cho phép sinh viên xem ảnh gốc." : "Đã tắt xem ảnh gốc cho sinh viên."
+      });
+    } catch (err) {
+      setToast({ type: "error", message: err?.message || "Không thể cập nhật cài đặt xem ảnh gốc." });
+    } finally {
+      setIsTogglingViewImage(false);
+    }
+  };
 
   const handleClearAllQuestions = () => {
     if (draftCount === 0) return;
@@ -750,7 +774,20 @@ export default function ExamDetailsPage() {
                 <Trash2 size={14} />
                 <span>Xóa câu chưa lưu ({draftCount})</span>
               </button>
-              <button 
+              <button
+                onClick={handleToggleViewImage}
+                disabled={!exam || isTogglingViewImage}
+                className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed ${
+                  allowViewImage
+                    ? "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                    : "bg-neutral-100 border-neutral-300 text-neutral-500 hover:bg-neutral-200"
+                }`}
+                title="Cho phép / không cho phép sinh viên xem ảnh gốc khi làm bài"
+              >
+                {allowViewImage ? <Eye size={14} /> : <EyeOff size={14} />}
+                <span>{allowViewImage ? "Xem ảnh gốc (SV): Bật" : "Xem ảnh gốc (SV): Tắt"}</span>
+              </button>
+              <button
                 onClick={() => setIsEditMode(prev => !prev)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   isEditMode 

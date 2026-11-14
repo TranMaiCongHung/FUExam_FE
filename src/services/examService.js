@@ -25,5 +25,27 @@ export const examService = {
     toggleVisibility(examId, visible) {
         const query = typeof visible === "boolean" ? `?visible=${visible}` : "";
         return api.patch(`/api/admin/exams/${examId}/visibility${query}`, {});
+    },
+
+    // 4.2 Bật/tắt cho phép sinh viên xem ảnh gốc
+    toggleViewImage(examId, allowed) {
+        const query = typeof allowed === "boolean" ? `?allowed=${allowed}` : "";
+        return api.patch(`/api/admin/exams/${examId}/view-image${query}`, {});
+    },
+
+    // Tìm đề thi theo id (duyệt qua các trang)
+    async findExamById(examId) {
+        const size = 100;
+        for (let page = 0; page < 50; page++) {
+            const res = await this.getExams(page, size);
+            const data = res?.data || res;
+            const list = data?.content || (Array.isArray(data) ? data : []);
+            const found = list.find(e => String(e.id ?? e.examId) === String(examId));
+            if (found) return found;
+            if (list.length < size) break;
+            if (data?.last === true) break;
+            if (typeof data?.totalPages === "number" && page + 1 >= data.totalPages) break;
+        }
+        return null;
     }
 };

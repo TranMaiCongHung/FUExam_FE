@@ -21,6 +21,7 @@ import {
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { practiceService } from "@/services/practiceService";
+import { examService } from "@/services/examService";
 import ConfirmModal from "@/shared/components/ConfirmModal";
 
 export default function ExamPracticePage() {
@@ -46,6 +47,22 @@ export default function ExamPracticePage() {
   const [starting, setStarting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [allowViewImage, setAllowViewImage] = useState(false);
+
+  useEffect(() => {
+    if (!id || id === "undefined" || id === "null") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const found = await examService.findExamById(id);
+        if (!cancelled) setAllowViewImage(found?.allowViewImage === true);
+      } catch (err) {
+        console.error("Failed to load exam view-image setting:", err);
+        if (!cancelled) setAllowViewImage(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
   
   // Modal Popups thay thế window.confirm và alert
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
@@ -371,7 +388,7 @@ export default function ExamPracticePage() {
         <div className="flex-1 flex flex-col relative bg-neutral-50/50 overflow-hidden">
           
           {/* Button Xem ảnh gốc */}
-          {examStarted && currentImage && (
+          {examStarted && currentImage && allowViewImage && (
             <div className="absolute top-4 right-6 z-10">
               <button 
                 onClick={() => setShowImageModal(true)}
@@ -775,7 +792,7 @@ export default function ExamPracticePage() {
       </div>
 
       {/* Image Modal */}
-      {showImageModal && currentImage && (
+      {showImageModal && currentImage && allowViewImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-white rounded-lg shadow-xl max-w-5xl max-h-[90vh] flex flex-col overflow-hidden w-full border border-neutral-200">
             <div className="flex justify-between items-center p-4 border-b border-neutral-200">
