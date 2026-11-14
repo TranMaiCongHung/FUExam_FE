@@ -17,6 +17,18 @@ export const questionService = {
         });
     },
 
+    createQuestion(examId, payload, imageFile) {
+        const fd = new FormData();
+        fd.append("data", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+        if (imageFile) fd.append("image", imageFile);
+        // Bắt buộc ghi đè Content-Type: instance mặc định là application/json nên axios 1.x
+        // sẽ serialize FormData thành JSON. Với multipart/form-data, adapter trình duyệt
+        // bỏ header này để trình duyệt tự thêm boundary.
+        return api.post(`/api/admin/exams/${examId}/questions`, fd, {
+            headers: { "Content-Type": "multipart/form-data" }
+        });
+    },
+
     saveBulkQuestions(examId, questions) {
         // Lưu ý backend: Tuyệt đối không gửi field `image` MultipartFile
         return api.post(`/api/admin/exams/${examId}/questions/bulk`, questions);
