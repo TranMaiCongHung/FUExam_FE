@@ -69,8 +69,31 @@ export default function ExamPracticePage() {
   const [resultModal, setResultModal] = useState(null);
   const [errorModal, setErrorModal] = useState(null);
   
-  // Lưu các đáp án đã chọn theo dạng { questionNumber: "A" | "B" | "C" | "D" }
+  // Lưu các đáp án đã chọn theo dạng { questionNumber: ["A"] | ["A", "B"] }
   const [selectedAnswers, setSelectedAnswers] = useState({});
+
+  // Kiểm tra câu hỏi có phải loại chọn nhiều đáp án không
+  const isQuestionMulti = (q) => {
+    if (!q) return false;
+    if (q.questionType === "MULTIPLE_CHOICE") return true;
+    const correctCount = (q.answerOption || q.answerOptions || []).filter(
+      o => o.isCorrect === true || o.correct === true
+    ).length;
+    return correctCount > 1;
+  };
+
+  // Lấy danh sách các nhãn đã chọn cho câu hỏi qNum (dưới dạng mảng)
+  const getSelectedLabels = (qNum) => {
+    const val = selectedAnswers[qNum];
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    return [val];
+  };
+
+  // Kiểm tra xem nhãn label có đang được chọn ở câu hỏi qNum không
+  const isOptionSelected = (qNum, label) => {
+    return getSelectedLabels(qNum).includes(label);
+  };
   const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 phút
 
   // 1. Khởi tạo: Nếu vào với mode === 'review' và có attemptId, tải dữ liệu xem lại từ backend
@@ -199,11 +222,17 @@ export default function ExamPracticePage() {
       const answersMap = {};
       questions.forEach((q, idx) => {
         const qNum = idx + 1;
-        const selectedLabel = selectedAnswers[qNum];
-        if (selectedLabel && q.answerOption) {
-          const opt = q.answerOption.find((o, oIdx) => (o.optionLabel || String.fromCharCode(65 + oIdx)) === selectedLabel);
-          if (opt && (opt.id || opt.id === 0)) {
-            answersMap[q.id] = [opt.id];
+        const selectedLabels = getSelectedLabels(qNum);
+        if (selectedLabels.length > 0 && q.answerOption) {
+          const optIds = [];
+          selectedLabels.forEach(selectedLabel => {
+            const opt = q.answerOption.find((o, oIdx) => (o.optionLabel || String.fromCharCode(65 + oIdx)) === selectedLabel);
+            if (opt && (opt.id || opt.id === 0)) {
+              optIds.push(opt.id);
+            }
+          });
+          if (optIds.length > 0) {
+            answersMap[q.id] = optIds;
           }
         }
       });
@@ -243,10 +272,19 @@ export default function ExamPracticePage() {
         
         const reviewQuestions = questions.map((q, idx) => {
           const qNum = idx + 1;
-          const selectedLabel = selectedAnswers[qNum];
-          const selectedOpt = q.answerOption?.find((o, oIdx) => (o.optionLabel || String.fromCharCode(65 + oIdx)) === selectedLabel);
-          const correctOpt = q.answerOption?.find(o => o.isCorrect === true || o.correct === true);
-          const isCorrect = selectedOpt && correctOpt && selectedOpt.id === correctOpt.id;
+          const selectedLabels = getSelectedLabels(qNum);
+          const selectedOpts = (q.answerOption || []).filter((o, oIdx) => {
+            const label = o.optionLabel || String.fromCharCode(65 + oIdx);
+            return selectedLabels.includes(label);
+          });
+          const correctOpts = (q.answerOption || []).filter(o => o.isCorrect === true || o.correct === true);
+          
+          const selectedIds = selectedOpts.map(o => o.id);
+          const correctIds = correctOpts.map(o => o.id);
+
+          const isCorrect = selectedIds.length > 0 
+            && selectedIds.length === correctIds.length 
+            && correctIds.every(id => selectedIds.includes(id));
 
           if (isCorrect) totalCorrect++;
 
@@ -255,14 +293,15 @@ export default function ExamPracticePage() {
             questionNumber: qNum,
             content: q.content,
             imageUrl: q.imageUrl,
+            questionType: q.questionType,
             answerOptions: q.answerOption?.map((opt, oIdx) => ({
               id: opt.id || oIdx,
               optionLabel: opt.optionLabel || String.fromCharCode(65 + oIdx),
               content: opt.content,
               isCorrect: opt.isCorrect === true || opt.correct === true
             })) || [],
-            userSelectedOptionIds: selectedOpt ? [selectedOpt.id] : [],
-            correctOptionIds: correctOpt ? [correctOpt.id] : [],
+            userSelectedOptionIds: selectedIds,
+            correctOptionIds: correctIds,
             isCorrect: !!isCorrect
           };
         });
@@ -299,10 +338,28 @@ export default function ExamPracticePage() {
 
   const handleSelectOption = (qNum, label) => {
     if (isReviewMode) return; // Không cho phép chọn khi đang xem lại bài
-    setSelectedAnswers(prev => ({
-      ...prev,
-      [qNum]: label
-    }));
+    const q = questions[qNum - 1];
+    const isMulti = isQuestionMulti(q);
+
+    setSelectedAnswers(prev => {
+      const prevVal = prev[qNum];
+      const currentList = Array.isArray(prevVal) ? prevVal : (prevVal ? [prevVal] : []);
+
+      if (isMulti) {
+        const nextList = currentList.includes(label)
+          ? currentList.filter(l => l !== label)
+          : [...currentList, label];
+        return {
+          ...prev,
+          [qNum]: nextList
+        };
+      } else {
+        return {
+          ...prev,
+          [qNum]: [label]
+        };
+      }
+    });
   };
 
   const handleExit = () => {
@@ -470,11 +527,22 @@ export default function ExamPracticePage() {
                 <div className="flex-1 max-w-3xl text-left bg-white border border-neutral-200 rounded-lg p-6 sm:p-8 shadow-2xs">
                   {/* Tiêu đề câu hỏi */}
                   <div className="mb-5 pb-3 border-b border-neutral-100 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
                       <h3 className="text-base sm:text-lg font-bold text-neutral-900">Câu {currentQuestion}:</h3>
                       <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
                         {currentQuestion} / {totalQuestions}
                       </span>
+
+                      {/* Loại câu hỏi */}
+                      {isQuestionMulti(currentQData) ? (
+                        <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                          Chọn nhiều đáp án
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                          Chọn 1 đáp án
+                        </span>
+                      )}
 
                       {/* Trạng thái câu trả lời trong chế độ Review */}
                       {isReviewMode && (
@@ -570,9 +638,11 @@ export default function ExamPracticePage() {
                     <div className="space-y-2.5">
                       {(currentQData?.answerOption || []).map((opt, idx) => {
                         const label = opt.optionLabel || String.fromCharCode(65 + idx);
-                        const isSelected = selectedAnswers[currentQuestion] === label;
+                        const isSelected = isOptionSelected(currentQuestion, label);
                         const isCorrect = opt.isCorrect === true || opt.correct === true;
-                        const hasAnsweredInStudy = isStudyMode && !!selectedAnswers[currentQuestion];
+                        const currentSelected = getSelectedLabels(currentQuestion);
+                        const hasAnsweredInStudy = isStudyMode && currentSelected.length > 0;
+                        const isMulti = isQuestionMulti(currentQData);
 
                         // Khi ở Chế độ học tập và đã chọn đáp án
                         if (hasAnsweredInStudy) {
@@ -602,6 +672,15 @@ export default function ExamPracticePage() {
                               <span className="text-sm sm:text-base leading-snug flex-1 font-normal">
                                 {opt.content}
                               </span>
+                              {isMulti && (
+                                <div className={`w-4 h-4 rounded-xs border flex items-center justify-center shrink-0 transition-colors ${
+                                  isSelected 
+                                    ? isCorrect ? "bg-emerald-600 border-emerald-600 text-white" : "bg-rose-600 border-rose-600 text-white"
+                                    : "border-neutral-300 bg-white"
+                                }`}>
+                                  {isSelected && <Check size={12} strokeWidth={3} />}
+                                </div>
+                              )}
                             </div>
                           );
                         }
@@ -629,6 +708,13 @@ export default function ExamPracticePage() {
                             }`}>
                               {opt.content}
                             </span>
+                            {isMulti && (
+                              <div className={`w-4 h-4 rounded-xs border flex items-center justify-center shrink-0 transition-colors ${
+                                isSelected ? "bg-orange-500 border-orange-500 text-white" : "border-neutral-300 bg-white"
+                              }`}>
+                                {isSelected && <Check size={12} strokeWidth={3} />}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -693,15 +779,21 @@ export default function ExamPracticePage() {
                 questions.map((q, idx) => {
                   const qNum = idx + 1;
                   const isCurrent = currentQuestion === qNum;
-                  const isAnswered = !!selectedAnswers[qNum];
+                  const selected = getSelectedLabels(qNum);
+                  const isAnswered = selected.length > 0;
                   
                   let bgClass = "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50";
                   
                   if (isStudyMode && isAnswered) {
-                    const selectedLabel = selectedAnswers[qNum];
-                    const correctOpt = q.answerOption?.find(o => o.isCorrect === true || o.correct === true);
-                    const correctLabel = correctOpt ? (correctOpt.optionLabel || String.fromCharCode(65 + q.answerOption.indexOf(correctOpt))) : null;
-                    if (selectedLabel === correctLabel) {
+                    const correctLabels = (q.answerOption || [])
+                      .filter(o => o.isCorrect === true || o.correct === true)
+                      .map((o, oIdx) => o.optionLabel || String.fromCharCode(65 + oIdx));
+                    
+                    const isAllCorrect = correctLabels.length > 0 
+                      && selected.length === correctLabels.length 
+                      && correctLabels.every(l => selected.includes(l));
+
+                    if (isAllCorrect) {
                       bgClass = "bg-emerald-500 border-emerald-600 text-white font-semibold";
                     } else {
                       bgClass = "bg-rose-500 border-rose-600 text-white font-semibold";
@@ -820,8 +912,8 @@ export default function ExamPracticePage() {
         isOpen={showConfirmSubmit}
         title="Xác nhận nộp bài thi"
         message={
-          Object.keys(selectedAnswers).length < questions.length
-            ? `Bạn mới chỉ trả lời ${Object.keys(selectedAnswers).length}/${questions.length} câu hỏi. Vẫn còn câu hỏi chưa có đáp án!\n\nBạn có chắc chắn muốn nộp bài thi ngay bây giờ không?`
+          questions.filter((_, idx) => getSelectedLabels(idx + 1).length > 0).length < questions.length
+            ? `Bạn mới chỉ trả lời ${questions.filter((_, idx) => getSelectedLabels(idx + 1).length > 0).length}/${questions.length} câu hỏi. Vẫn còn câu hỏi chưa có đáp án!\n\nBạn có chắc chắn muốn nộp bài thi ngay bây giờ không?`
             : `Bạn đã hoàn thành đủ tất cả ${questions.length} câu hỏi!\n\nBạn có chắc chắn muốn nộp bài thi ngay bây giờ không?`
         }
         type="question"
